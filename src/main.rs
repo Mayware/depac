@@ -62,13 +62,13 @@ macro_rules! warnln {
 
 macro_rules! logln {
     ($($arg:tt)*) => {
-        println!("{} {}", "[LOG]".bold(), format!($($arg)*))
+        println!("{} {}", "[LOG]".cyan().bold(), format!($($arg)*))
     };
 }
 
 macro_rules! log {
     ($($arg:tt)*) => {
-        print!("{} {}", "[LOG]".bold(), format!($($arg)*))
+        print!("{} {}", "[LOG]".cyan().bold(), format!($($arg)*))
     };
 }
 
@@ -199,10 +199,7 @@ fn filter_removable(to_remove: Vec<String>) -> Result<Vec<String>> {
             to_remove.remove(pkg);
 
             let required_by = required_by_map.get(pkg).expect("cached above");
-            warnln!(
-                "Unable to remove {} as the following depend upon it:",
-                pkg
-            );
+            warnln!("Unable to remove {} as the following depend upon it:", pkg);
             for dep in required_by {
                 println!("  - {}", dep);
             }
@@ -246,6 +243,32 @@ fn remove_packages(packages: &[String]) -> Result<()> {
     Ok(())
 }
 
+// Check if the to_install packages are already installed as deps, and if so,
+// simply just mark em as explicit
+fn filter_installables(to_install: Vec<String>) -> Result<Vec<String>> {
+    let installed_raw = run_capture("pacman", &["-Qq"])?;
+    let installed: HashSet<String> = lines_to_vec(&installed_raw).into_iter().collect();
+
+    let mut result = Vec::new();
+    for pkg in to_install {
+        if installed.contains(&pkg) {
+            logln!(
+                "{} has already been installed as a dependency, marking as explicit",
+                pkg
+            );
+            match run_capture("pacman", &["-D", "--asexplicit", pkg.as_str()]) {
+                Ok(_) => logln!("Marked {} as explicitly installed", pkg),
+                Err(e) => {
+                    fail!("Could not mark {} as explicitly installed: {}", pkg, e);
+                }
+            }
+        } else {
+            result.push(pkg);
+        }
+    }
+    Ok(result)
+}
+
 fn install_packages(packages: &[String]) -> Result<()> {
     let mut args = vec!["-Syu", "--noconfirm"];
     if packages.is_empty() {
@@ -278,7 +301,7 @@ fn main() -> Result<()> {
 
     // Remove unused deps
     let unused_deps_raw = run_capture("pacman", &["-Qtdq"]).unwrap_or_default(); // Nonzero error on
-                                                                                 // no orphans
+    // no orphans
     let unused_deps = subtract(&lines_to_vec(&unused_deps_raw), &config.ignore);
     if !unused_deps.is_empty()
         && check_package_warn_limit(
@@ -305,6 +328,7 @@ fn main() -> Result<()> {
     let installed_raw = run_capture("pacman", &["-Qeq"])?; // Will have changed, after removals
     let installed = lines_to_vec(&installed_raw);
     let to_install = subtract(&config.packages, &installed);
+    let to_install = filter_installables(to_install)?;
     install_packages(&to_install)?;
     Ok(())
 }
