@@ -1,12 +1,12 @@
+use std::process::exit;
 use anyhow::{Result, anyhow};
 use owo_colors::OwoColorize;
 use schemars::JsonSchema;
 use serde::Deserialize;
 use std::{
     collections::{HashMap, HashSet},
-    env,
     io::{self, Write},
-    process::{Command, exit},
+    process::Command,
 };
 
 #[derive(Debug, Deserialize, JsonSchema)]
@@ -296,8 +296,11 @@ fn install_packages(packages: &[String]) -> Result<()> {
 }
 
 fn main() -> Result<()> {
-    let arg = env::args().nth(1).expect("Failed to get json arg");
-    let config: Config = serde_json::from_str(&arg).expect("Failed to parse config");
+    let path = std::env::args()
+        .nth(1)
+        .expect("Configuration path not given");
+    let config: Config =
+        serde_json::from_str(&std::fs::read_to_string(path)?).expect("Failed to parse config");
 
     // Remove unused deps
     let unused_deps_raw = run_capture("pacman", &["-Qtdq"]).unwrap_or_default(); // Nonzero error on

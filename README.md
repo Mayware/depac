@@ -1,4 +1,4 @@
-# Desym
+# Depac
 
 ##  Licensing
 The project's source code is licensed under `LGPL-3.0-or-later`.
