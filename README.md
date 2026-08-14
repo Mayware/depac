@@ -1,6 +1,11 @@
 # Depac
 Declarative Pacman
 
+## Installation
+| Provider | Package |
+|----------|---------|
+| AUR | [depac-git](https://aur.archlinux.org/packages/depac-git) |
+
 ## Usage
 Depac takes a single argument, the path of the file containing the json configuration, described below. There is no other way to interact with the program.
 
